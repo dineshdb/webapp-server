@@ -9,4 +9,5 @@ main({
   fmt: sh("deno fmt --unstable ."),
   lint: sh("deno lint --unstable ."),
   compile: sh("deno compile --unstable main.ts"),
+  image: sh(`podman build -t dineshdb/webapp-server .`),
 });

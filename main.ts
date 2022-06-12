@@ -1,15 +1,15 @@
-import { exists, Oak } from "./deps.ts";
+import { exists, Application, Router, Context} from "./deps.ts";
 import { envsubst } from "./src/envsubst.ts";
 import { logger, timer } from "./src/middlewares.ts";
 
 const PORT = Deno.env.get("PORT") ?? "8080";
 const port = parseInt(PORT);
 
-const app = new Oak.Application();
+const app = new Application();
 app.use(logger);
 app.use(timer);
 
-const router = new Oak.Router();
+const router = new Router();
 app.use(router.routes());
 app.use(router.allowedMethods());
 app.use(serve("public"));
@@ -22,20 +22,28 @@ await Promise.all([
 console.info(`Starting on http://0.0.0.0:${port}`);
 app.listen({ port });
 
+
 function serve(folder: string) {
   const root = `${Deno.cwd()}/${folder}`;
-  return async (ctx: Oak.Context) =>
-    ctx.send({
-      root,
-      index: "index.html",
-    });
+  return async (ctx: Context, next: () => unknown) => {
+    const filePath = ctx.request.url.pathname;
+    const stat = await exists(`${root}${filePath}`);
+    if (stat) {
+      return ctx.send({
+        root,
+        index: 'index.html',
+      });
+    }
+    return next();
+  };
 }
 
 // TODO Fallback to per folder index.html
-function fallbackIndexHtml(file: string) {
-  return (ctx: Oak.Context) => {
-    return Oak.send(ctx, file, {
+function fallbackIndexHtml(index: string = 'index.html') {
+  return (ctx: Context) => {
+    return ctx.send({
       root: Deno.cwd(),
+      index,
     });
   };
 }
